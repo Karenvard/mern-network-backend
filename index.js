@@ -43,7 +43,7 @@ app.ws("/", (ws, req) => {
 const start = async () => {
     try {
         await mongoose.connect(process.env.MONGO_URI)
-        app.listen(PORT, () => {ChalkStyles.successfulMSG(`Server started on - http://localhost:5555`);});
+        app.listen(PORT, () => {ChalkStyles.successfulMSG(`Server started on - https://mern-network.onrender.com`);});
     } catch (e) {
         ChalkStyles.errorMSG(e);
     }
