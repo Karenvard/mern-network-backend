@@ -36,7 +36,6 @@ app.ws("/", (ws, req) => {
         switch (parsedMSG.type) {
             case "connection":
                 ws.chatID = parsedMSG.chatID;
-                console.log(`ws_chat_ID: ${ws.chatID},  msg_chat_id: ${parsedMSG.chatID}`)
                 break;
             case "message":
                 broadcastMessage(parsedMSG);
@@ -48,7 +47,7 @@ app.ws("/", (ws, req) => {
 const start = async () => {
     try {
         await mongoose.connect(process.env.MONGO_URI)
-        app.listen(PORT, () => {ChalkStyles.successfulMSG(`Server started on - http://localhost:5555`);});
+        app.listen(PORT, () => {ChalkStyles.successfulMSG(`Server started on - ${process.env.SERVER_HOST}`);});
     } catch (e) {
         ChalkStyles.errorMSG(e);
     }
