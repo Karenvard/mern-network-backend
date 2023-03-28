@@ -8,11 +8,11 @@ const jwt = require("jsonwebtoken")
 const {validationResult} = require("express-validator");
 const FollowedProfile = require("../models/FollowedProfile")
 
-const generateAccessToken = (id, roles, login, remember) => {
+const generateAccessToken = (id, roles, login, name, remember) => {
     const payload = {
         id,
         roles,
-        login
+        login,
     }
     if (remember) {
         return jwt.sign(payload, process.env.SECRET_KEY, {expiresIn: '24h'})
@@ -125,6 +125,9 @@ class authController {
         try {
             const {decodedData} = req
             const authUserData = await Profile.findOne({userId: decodedData.id})
+            if (!authUserData) {
+                res.json({resultCode: 1});
+            }
             res.json({
                 resultCode: 0,
                 profile: authUserData

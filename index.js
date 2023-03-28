@@ -17,7 +17,18 @@ app.use(express.static(path.resolve(__dirname, 'static')))
 app.use(express.static(path.resolve(__dirname, '..')))
 app.use(fileUpload({}))
 
-const PORT = process.env.SERVER_PORT
+const PORT = process.env.SERVER_PORT;
+
+const broadcastMessage = (msg) => {
+    aWSs.clients.forEach(client => {
+        if (client.chatID === msg.chatID) {
+            client.send(JSON.stringify({
+                SenderID: msg.senderProfile.userId,
+                text: msg.message
+            }))
+        }
+    })
+}
 
 app.ws("/", (ws, req) => {
     ws.on("message", msg => {
@@ -25,16 +36,10 @@ app.ws("/", (ws, req) => {
         switch (parsedMSG.type) {
             case "connection":
                 ws.chatID = parsedMSG.chatID;
+                console.log(`ws_chat_ID: ${ws.chatID},  msg_chat_id: ${parsedMSG.chatID}`)
                 break;
             case "message":
-                console.log(1);
-                aWSs.clients.forEach(client => {
-                    console.log(2);
-                    if (client.chatID === parsedMSG.chatID) {
-                        console.log(3);
-                        client.send(JSON.stringify(`${parsedMSG.username}: ${parsedMSG.message}`))
-                    }
-                })
+                broadcastMessage(parsedMSG);
                 break;
         }
     })
@@ -43,7 +48,7 @@ app.ws("/", (ws, req) => {
 const start = async () => {
     try {
         await mongoose.connect(process.env.MONGO_URI)
-        app.listen(PORT, () => {ChalkStyles.successfulMSG(`Server started on - https://mern-network.onrender.com`);});
+        app.listen(PORT, () => {ChalkStyles.successfulMSG(`Server started on - http://localhost:5555`);});
     } catch (e) {
         ChalkStyles.errorMSG(e);
     }

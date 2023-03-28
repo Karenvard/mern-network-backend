@@ -1,5 +1,8 @@
 const Profile = require("../models/Profile");
 const FollowedProfile = require("../models/FollowedProfile");
+const Chat = require('../models/Chat')
+const ChalkStyles = require("../ChalkStyles");
+const { db } = require("../models/Profile");
 
 class usersController {
     async getUsers(req, res) {
@@ -106,6 +109,73 @@ class usersController {
                 }
             })
         }
+    }
+
+    async getFollowedUsers(req, res) {
+        const {decodedData} = req;
+        const followedProfile = await FollowedProfile.findOne({userId: decodedData.id});
+        const followedUsers = [];
+        for (let i = 0; i <= followedProfile.users.length - 1; i++) {
+            const followedUser = await Profile.findOne({userId: followedUsers.users[i]})
+            followedUsers.push(followedUser);
+        }
+        return res.json({
+            resultCode: 0,
+            followedUsers,
+        })
+    }
+
+    async startChat(req, res) {
+        try {
+            const {decodedData} = req;
+            const newChat = new Chat();
+            newChat.persons.push({userId: decodedData.id});
+            newChat.persons.push({userId: req.body.id});
+            await newChat.save();
+            ChalkStyles.successfulMSG("Chat started")
+            res.json({
+                resultCode: 0,
+            })
+        } catch (e) {
+            res.json({
+                resultCode: 1,
+                error: "startChat-catch-error",
+                message: e
+            })
+        }
+    }
+
+    async getChats(req, res) {
+        const {decodedData} = req;
+        const dbChats = await Chat.find();
+        const chats = [];
+        const convPartners = [];
+        for (let i = 0; i <= dbChats.length - 1; i++) {
+            if (dbChats[i].persons[0].userId === decodedData.id) {
+                chats.push(dbChats[i]);
+            } else if (dbChats[i].persons[1].userId === decodedData.id) {
+                chats.push(dbChats[i]);
+            }
+        }
+        for (let i = 0; i < chats.length; i++) {
+            if (chats[i].persons[0].userId !== decodedData.id) {
+                convPartners.push(await Profile.findOne({userId: chats[i].persons[0].userId}))
+            } else if (chats[i].persons[1].userId !== decodedData.id) {
+                convPartners.push(await Profile.findOne({userId: chats[i].persons[1].userId}))
+            }
+        }
+        res.json({chats, convPartners})
+    }
+
+    async sendMessage(req, res) {
+        const {decodedData} = req;
+        const {chat, text} = req.body;
+        const currentChat = await Chat.findOne({_id: chat._id})
+        currentChat.messages.push({SenderID: decodedData.id, text})
+        await currentChat.save();
+        res.json({
+            resultCode: 0
+        })
     }
 }
 
