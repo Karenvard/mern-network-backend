@@ -1,5 +1,5 @@
-const path = require('path')
-require("dotenv").config({path: path.resolve(__dirname, "..", ".env")})
+require("dotenv").config()
+const path = require("path")
 const User = require("../models/User");
 const Profile = require("../models/Profile")
 const Role = require("../models/Role");
@@ -21,28 +21,16 @@ const generateAccessToken = (id, roles, login, name, remember) => {
 }
 
 class authController {
-    async register(req, res) {
+    async signup(req, res) {
         try {
             const errors = validationResult(req)
             if (!errors.isEmpty()) {
-                return res.json({
-                    resultCode: 1,
-                    error: {
-                        type: "register-validation-error",
-                        body: errors.error,
-                    }
-                })
+               return errors.array().forEach(err => new HTTP_Error(res, "signup", err.msg))
             }
             const {login, name, vorname, password} = req.body;
             const candidate = await User.findOne({login})
             if (candidate) {
-                return res.json({
-                    resultCode: 1,
-                    error: {
-                        type: "register-repeated-user-error",
-                        body: `Пользователь с логином ${login} уже существует`
-                    }
-                })
+                return new HTTP_Error(res, "signup", "User with username ${login} is already exists.")
             }
             const hashedPassword = bcryptjs.hashSync(password, 7)
             const userRole = await Role.findOne({value: "USER"})
@@ -63,36 +51,16 @@ class authController {
             await user.save()
             await userProfile.save()
             await FollowedUsers.save()
-            return res.json({
-                resultCode: 0,
-                message: {
-                    type: "register-user-success",
-                    body: `Пользователь ${login} успешно зарегестрирован`
-                }
+            return res.status(200).json({
+                message: `Пользователь ${login} успешно зарегестрирован`
             })
         } catch (e) {
-            res.json({
-                resultCode: 1,
-                error: {
-                    type: "register-catch-error",
-                    body: e.message
-                },
-            })
+            return new HTTP_Error(res, "signup", "Server error. Please try signup later").InternalServerError()
         }
     }
 
-    async login(req, res) {
+    async signin(req, res) {
         try {
-            const errors = validationResult(req)
-            if (!errors.isEmpty()) {
-                return res.json({
-                    resultCode: 1,
-                    error: {
-                        type: "login-validation-error",
-                        body: errors.error,
-                    }
-                })
-            }
             const {login, password, rememberMe} = req.body;
             const user = await User.findOne({login})
             const validatedPassword = bcryptjs.compareSync(password, user.password)
@@ -106,9 +74,9 @@ class authController {
                 })
             }
             const token = generateAccessToken(user._id, user.roles, user.login, rememberMe);
-            return res.json({
-                resultCode: 0,
+            return res.status(200).json({
                 token,
+                message: `You signed in successfully.`
             })
         } catch (e) {
             res.json({
