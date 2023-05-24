@@ -4,7 +4,6 @@ const User = new Schema({
     login: {type: String, unique: true, required: true},
     password: {type: String, required: true},
     roles: [{type: String, ref: 'Role'}],
-    profile: {type: {}, ref: 'Profile'}
 })
 
 module.exports = model('User', User)

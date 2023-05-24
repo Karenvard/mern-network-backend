@@ -4,6 +4,11 @@ class adminController {
     async newRole(req, res) {
         try {
             const {roleName} = req.body
+            const {decodedData} = req;
+            const adminRole = await Role.findOne({NAME: "ADMIN"});
+            if (decodedData.roles.find(role => role._id === adminRole._id && role.NAME === adminRole.NAME)) {
+
+      }
             const candidate = await Role.findOne({value: roleName})
             if (candidate) {
                 return res.json({
@@ -11,7 +16,7 @@ class adminController {
                     error: "Такая роль уже существует"
                 })
             }
-            const newRole = await new Role({value: roleName})
+            const newRole = new Role({value: roleName})
             await newRole.save();
             res.json(newRole)
         } catch (e) {

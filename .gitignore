@@ -1,2 +1,9 @@
 .env
 /node_modules
+/dist
+/build
+*.yml
+/.idea
+*/.idea
+.DS_STORE
+*/.DS_STORE
