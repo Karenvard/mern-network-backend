@@ -1,30 +1,19 @@
-const Role = require("../models/Role")
+const Role = require("../models/Role");
+const {HTTP_Error} = require("../Controllers/errorController")
 
 class adminController {
     async newRole(req, res) {
         try {
-            const {roleName} = req.body
-            const {decodedData} = req;
-            const adminRole = await Role.findOne({NAME: "ADMIN"});
-            if (decodedData.roles.find(role => role._id === adminRole._id && role.NAME === adminRole.NAME)) {
-
-      }
+            const {roleName} = req.body 
             const candidate = await Role.findOne({value: roleName})
             if (candidate) {
-                return res.json({
-                    resultCode: 1,
-                    error: "Такая роль уже существует"
-                })
+                return new HTTP_Error(res, "newrole", "That role is already exists.")
             }
-            const newRole = new Role({value: roleName})
+            const newRole = new Role({NAME: roleName})
             await newRole.save();
-            res.json(newRole)
+            return res.status(200).json({message: "Role was created successfully"})
         } catch (e) {
-            res.json({
-                resultCode: 1,
-                message: "Не удалось добавить роль",
-                error: e.message
-            })
+            return new HTTP_Error(res, "newrole", "Server error. Please try to add new role later.")
         }
     }
 }

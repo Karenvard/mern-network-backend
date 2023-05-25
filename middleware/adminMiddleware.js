@@ -1,19 +1,14 @@
-require("dotenv").config({path: "../../server"})
-const jwt = require("jsonwebtoken")
+const {HTTP_Error} = require("../Controllers/errorController")
 
-module.exports = function (req, res, next) {
+module.exports = async function (req, res, next) {
     try {
-        if (req.decodedData.id !== process.env.ADMIN_ID) {
-            
+        const {decodedData} = req;
+        const adminRole = await Role.findOne({NAME: "ADMIN"});
+        if (!decodedData.roles.find(role => role._id === adminRole._id && role.NAME === adminRole.NAME)) {
+          return new HTTP_Error(res, "admin", "Access denied, no admin role").BadRequest()
         }
         next()
     } catch (e) {
-        return res.json({
-            resultCode: 1,
-            error: {
-                type: "authMiddleware-catch-error",
-                body: e.message,
-            }
-        })
+        return new HTTP_Error(res, "admin", "Server error.")
     }
 }

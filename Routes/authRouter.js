@@ -5,21 +5,21 @@ const {check} = require("express-validator")
 const fileUpload = require('express-fileupload')
 const imageMiddleware = require('../middleware/imageMiddleware')
 
-router.post("/register", [
-    check('login', "Логин пользователя не может быть пустым").notEmpty(),
+router.post("/signup", [
+    check('username', "Логин пользователя не может быть пустым").notEmpty(),
     check('password', 'Пароль пользователя не может быть пустым').notEmpty(),
     check('name', 'Имя пользователя не может быть пустым').notEmpty(),
-    check('vorname', 'Фамилия пользователя не может быть пустым').notEmpty(),
-    check('login', "Логин не должен быть меньше 3-ех символов и не больше 10-ти").isLength({min: 3, max: 10}),
+    check('surname', 'Фамилия пользователя не может быть пустым').notEmpty(),
+    check('username', "Логин не должен быть меньше 3-ех символов и не больше 10-ти").isLength({min: 1, max: 10}),
     check('password', "Пароль не должен быть меньше 8-ех символов и не больше 18-ти").isLength({min: 8, max: 18}),
-    check('name', "Имя не должно быть меньше 3-ех символов и не больше 15-ти").isLength({min: 3, max: 15}),
-    check('vorname', "Фамилия не должна быть меньше 5-ех символов и не больше 18-ти").isLength({min: 3, max: 18}),
-], authController.register)
+    check('name', "Имя не должно быть меньше 3-ех символов и не больше 15-ти").isLength({min: 1, max: 15}),
+    check('surname', "Фамилия не должна быть меньше 5-ех символов и не больше 18-ти").isLength({min: 3, max: 18}),
+], authController.signup)
 
-router.post("/login", [
-    check('login', "Имя пользователя не может быть пустым").notEmpty(),
+router.post("/signin", [
+    check('username', "Имя пользователя не может быть пустым").notEmpty(),
     check('password', 'Пароль пользователя не может быть пустым').notEmpty(),
-], authController.login)
+], authController.singin)
 
 router.get("/profile", authMiddleware, authController.profile)
 
@@ -37,12 +37,12 @@ router.post("/header", [
 
 router.post("/aboutMe", [
     authMiddleware,
-    check('value', "Описание профиля не может быть больше 50 символов").isLength({max: 50})
+    check('aboutMe', "Описание профиля не может быть больше 50 символов").isLength({max: 50})
 ], authController.changeAboutMe)
 
 router.post("/status", [
     authMiddleware,
-    check('value', "Статус не можеть быть больше 20 символов").isLength({max: 20})
+    check('status', "Статус не можеть быть больше 20 символов").isLength({max: 20})
 ], authController.changeStatus)
 
 router.post("/addPost", [

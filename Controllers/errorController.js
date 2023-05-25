@@ -35,4 +35,4 @@ export class HTTP_Error {
     }
 }
 
-export default HTTP_Error;
+export default HTTP_Error = new HTTP_Error();

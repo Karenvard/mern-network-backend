@@ -1,18 +1,17 @@
 require("dotenv").config()
-const path = require("path")
 const User = require("../models/User");
 const Profile = require("../models/Profile")
 const Role = require("../models/Role");
 const bcryptjs = require("bcryptjs");
 const jwt = require("jsonwebtoken")
 const {validationResult} = require("express-validator");
-const FollowedProfile = require("../models/FollowedProfile")
+const {HTTP_Error} = require("./errorController")
 
-const generateAccessToken = (id, roles, login, name, remember) => {
+const generateAccessToken = (id, roles, username, remember) => {
     const payload = {
         id,
         roles,
-        login,
+        username,
     }
     if (remember) {
         return jwt.sign(payload, process.env.SECRET_KEY, {expiresIn: '24h'})
@@ -25,379 +24,251 @@ class authController {
         try {
             const errors = validationResult(req)
             if (!errors.isEmpty()) {
-               return errors.array().forEach(err => new HTTP_Error(res, "signup", err.msg))
+                const error = errors.array()[0];
+                return new HTTP_Error(res, "signup", error.msg).BadRequest()
             }
-            const {login, name, vorname, password} = req.body;
+            const {username, name, surname, password} = req.body;
             const candidate = await User.findOne({login})
             if (candidate) {
-                return new HTTP_Error(res, "signup", "User with username ${login} is already exists.")
+                return new HTTP_Error(res, "signup", "User with username ${login} is already exists.").BadRequest()
             }
             const hashedPassword = bcryptjs.hashSync(password, 7)
             const userRole = await Role.findOne({value: "USER"})
-            const user = new User({login, password: hashedPassword, roles: [userRole.value]})
-            const FollowedUsers = new FollowedProfile({userId: user._id})
-            const userProfile = new Profile({
-                login,
-                name,
-                vorname,
-                userId: user._id,
-                aboutMe: '',
-                status: '',
-                photos: {
-                    large: '',
-                    small: ''
-                }
-            })
+            const user = new User({username, password: hashedPassword, roles: [userRole.value], name, surname})
             await user.save()
-            await userProfile.save()
-            await FollowedUsers.save()
             return res.status(200).json({
-                message: `Пользователь ${login} успешно зарегестрирован`
+                message: `User ${username} was signed up successfully`
             })
         } catch (e) {
-            return new HTTP_Error(res, "signup", "Server error. Please try signup later").InternalServerError()
+            return new HTTP_Error(res, "signup", "Server error. Please try sign up later").InternalServerError()
         }
     }
 
     async signin(req, res) {
         try {
-            const {login, password, rememberMe} = req.body;
-            const user = await User.findOne({login})
-            const validatedPassword = bcryptjs.compareSync(password, user.password)
-            if (!validatedPassword || !user) {
-                return res.json({
-                    resultCode: 1,
-                    error: {
-                        type: "login-fields-error",
-                        body: "Неправильный логин или пароль"
-                    }
-                })
-            }
-            const token = generateAccessToken(user._id, user.roles, user.login, rememberMe);
+            const {username, password, rememberMe} = req.body;
+            const user = await User.findOne({username})
+            const validatedPassword = bcryptjs.compareSync(password, user.password || "")
+            if (!validatedPassword || !user) return new HTTP_Error(res, "signin", "Incorrect username or password.").BadRequest();
+            const token = generateAccessToken(user._id, user.roles, user.username, rememberMe);
             return res.status(200).json({
                 token,
                 message: `You signed in successfully.`
             })
         } catch (e) {
-            res.json({
-                resultCode: 1,
-                error: {
-                    type: "login-catch-error",
-                    body: e.message
-                }
-            })
+            return new HTTP_Error(res, "singin", "Server error. Please try sign in later.").InternalServerError()
         }
     }
 
     async profile(req, res) {
         try {
             const {decodedData} = req
-            const authUserData = await Profile.findOne({userId: decodedData.id})
-            if (!authUserData) {
-                res.json({resultCode: 1});
-            }
-            res.json({
-                resultCode: 0,
+            const authUserData = await User.findOne({userId: decodedData.id})
+            if (!authUserData) return new HTTP_Error(res, "profile", `Server error. No user ${decodedData.username}`).BadRequest()
+            return res.status(200).json({
                 profile: authUserData
             })
         } catch (e) {
-            res.json({
-                resultCode: 1,
-                error: {
-                    type: "profile-catch-error",
-                    body: e.message
-                }
-            })
+            return new HTTP_Error(res, "Server error. Please try again later.").InternalServerError()
         }
     }
 
-    async uploadAuthPhoto(req, res) {
+    async uploadAvatar(req, res) {
         try {
-            const {decodedData, fileName} = req
-            const oldAuthProfile = await Profile.findOne({userId: decodedData.id})
-            await Profile.updateOne({userId: decodedData.id}, {
+            const {decodedData, fileName} = req;a
+            await User.updateOne({userId: decodedData.id}, {
                 $set: {
-                    photos: {
-                        small: `${process.env.SERVER_HOST}/${fileName}`,
-                        large: oldAuthProfile.photos.large
-                    }
+                    avatar: `${process.env.SERVER_HOST}/${fileName}`,
                 }
             })
-            const authProfile = await Profile.findOne({userId: decodedData.id})
-            res.json({
-                resultCode: 0,
-                message: {
-                    type: "photo-changed-success",
-                    body: "Фото профиля успешно изменено"
-                },
-                profile: authProfile
+            res.status(200).json({
+                message: "Photo uploaded successfully"
             })
         } catch (e) {
-            res.json({
-                resultCode: 1,
-                error: {
-                    type: "photo-catch-error",
-                    body: e.message
-                }
-            })
+            return new HTTP_Error(res, "avatar", "Server error. Please try upload photo later.").InternalServerError()
         }
     }
 
-    async uploadHeaderPhoto(req, res) {
+    async uploadHeader(req, res) {
         try {
             const {decodedData, fileName} = req
-            const oldAuthProfile = await Profile.findOne({userId: decodedData.id})
-            await Profile.updateOne({userId: decodedData.id}, {
+            await User.updateOne({userId: decodedData.id}, {
                 $set: {
-                    photos: {
-                        small: oldAuthProfile.photos.small,
-                        large: `${process.env.SERVER_HOST}/${fileName}`
-                    }
+                    header: `${process.env.SERVER_HOST}/${fileName}`
                 }
             })
-            const authProfile = await Profile.findOne({userId: decodedData.id})
-            res.json({
-                resultCode: 0,
-                message: {
-                    type: "header-changed-success",
-                    body: "Фото успешно изменено"
-                },
-                profile: authProfile
+            res.status(200).json({
+                message: "Photo uploaded successfully"
             })
         } catch (e) {
-            res.json({
-                resultCode: 1,
-                error: {
-                    type: "header-catch-error",
-                    body: e.message
-                }
-            })
+            return new HTTP_Error(res, "header", "Server error. Please try upload photo later.").InternalServerError()
         }
     }
 
     async changeAboutMe(req, res) {
         try {
-            const {decodedData, body} = req
-            const authProfile = await Profile.findOne({userId: decodedData.id})
-            authProfile.aboutMe = body.value
-            res.json({
-                resultCode: 0,
-                profile: authProfile,
-                message: {
-                    type: "aboutMe-changed-success",
-                    body: "Описание профиля успешно изменено"
-                }
+            const {decodedData, aboutMe} = req;
+            const errors = validationResult(req);
+            if (!errors.isEmpty()) {
+              const error = errors.array()[0];
+              return new HTTP_Error(res, "aboutme", error.msg).BadRequest()
+            }
+            await Profile.UpdateOne({userId: decodedData.id}, {
+              $set: {
+                aboutMe: aboutMe
+              }
             })
-            await authProfile.save()
+            res.status(200).json({
+                message: "Profile description was changed successfully"
+            })
         } catch (e) {
-            res.json({
-                resultCode: 1,
-                error: {
-                    type: "aboutMe-catch-error",
-                    body: e.message
-                }
-            })
+            return new HTTP_Error(res, "aboutme", "Server error. Please try change profile description later.").InternalServerError()
         }
     }
 
     async changeStatus(req, res) {
         try {
             const errors = validationResult(req)
-            const {decodedData, body} = req
+            const {decodedData, status} = req
             const authProfile = await Profile.findOne({userId: decodedData.id})
             authProfile.status = body.value
             if (!errors.isEmpty()) {
-                return res.json({
-                    resultCode: 1,
-                    error: {
-                        type: "status-validation-error",
-                        body: errors.error,
-                    }
-                })
+              const error = errors.array()[0];
+              return new HTTP_Error(res, "status", error.msg).BadRequest()
             }
-            res.json({
-                resultCode: 0,
-                profile: authProfile,
-                message: {
-                    type: "status-changed-success",
-                    body: "Статус профиля успешно изменен"
-                }
+            res.status(200).json({
+                message: "Profile status was changed successfully"
             })
             await authProfile.save()
         } catch (e) {
-            console.log(e);
-            res.json({
-                resultCode: 1,
-                error: {
-                    type: "status-catch-error",
-                    body: e.message,
-                }
-            })
+            return new HTTP_Error(res, "status", "Server error. Please try change your profile status later.").InternalServerError()
         }
     }
 
     async addPost(req, res) {
         try {
             const {decodedData, fileName} = req
-            const {Title, Description} = req.body
+            const {title, body} = req.body
             const authProfile = await Profile.findOne({userId: decodedData.id})
             authProfile.posts.push({
-                Title,
-                Description,
-                Photo: `${process.env.SERVER_HOST}/${fileName}`,
-                Likes: 0,
-                Comments: []
+                title,
+                body,
+                photo: `${process.env.SERVER_HOST}/${fileName}`,
+                likes: [],
+                comments: []
             })
-            res.json({
-                resultCode: 0,
-                profile: authProfile,
-                message: {
-                    type: "post-created-success",
-                    body: "Пост был добавлен"
-                }
+            res.status(200).json({
+                message: "Post was added successfully"
             })
             await authProfile.save();
         } catch (e) {
-            res.json({
-                resultCode: 1,
-                error: {
-                    type: "post-catch-error",
-                    body: e.message
-                }
-            })
+            return new HTTP_Error(res, "addpost", "Server error. Please try add new post later.").InternalServerError()
         }
     }
 
     async addComment(req, res) {
         try {
             const {decodedData} = req;
-            const {Title, Body, userId} = req.body;
-            const user = await Profile.findOne({userId})
-            user.posts.Comments.push({
-                ownerId: decodedData.id,
-                ownerLogin: decodedData.login,
-                Title,
-                Body,
-                Likes: 0,
+            const {title, body, userId} = req.body;
+            const user = await User.findOne({userId})
+            user.posts.comments.push({
+                owner: await User.findOne({_id: decodedData.id}),
+                title,
+                body,
+                likes: 0,
             })
-            res.json({
-                resultCode: 0,
-                profile: user,
-                message: {
-                    type: "comment-created-success",
-                    body: "Комментарий добавлен"
-                }
+            res.status(200).json({
+                  message: "Comment was added successfully"
             })
             user.save()
         } catch (e) {
-            res.json({
-                resultCode: 1,
-                error: {
-                    type: "comment-catch-error",
-                    body: e.message
-                }
-            })
+            return new HTTP_Error(res, "addcomment", "Server error. Please try to add comment later.").InternalServerError()
         }
     }
 
     async likePost(req, res) {
         try {
+            const {decodedData} = req;
             const {userId, postId} = req.body
-            const user = await Profile.findOne({userId})
-            for (let i = 0; i < user.posts.length; i++) {
-                if (user.posts[i]._id === postId) {
-                    user.posts[i].Likes = user.posts[i].Likes + 1
+            const user = await User.findOne({userId});
+            user.posts = user.posts.map(function (post) {
+                if (post._id === postId && !post.likes.includes(decodedData.id)) {
+                    post.likes.push(decodedData.id);
                 }
-            }
-            res.json({
-                resultCode: 0,
-                profile: user,
+                return post;
             })
-            await user.save()
+            await user.save();
+            return res.status(200).json({
+              message: "Post was liked successfully"
+            })
         } catch (e) {
-            res.json({
-                resultCode: 1,
-                error: {
-                    type: "likePost-catch-error",
-                    body: e.message
-                }
-            })
+            return new HTTP_Error(res, "likepost", "Server error. Please try to like post later.").InternalServerError()
         }
     }
 
     async likeComment(req, res) {
         try {
-            const {commentId, userId} = req.body
-            const user = await Profile.findOne({userId})
-            for (let i = 0; i < user.posts.length; i++) {
-                for (let j = 0; j < user.posts[i].Comments.length; j++) {
-                    if (user.posts[i].Comments[j]._id === commentId) {
-                        user.posts[i].Comments[j].Likes = user.posts[i].Comments[j].Likes + 1
-                    }
+            const {commentId, postId, userId} = req.body;
+            const {decodedData} = req;
+            const user = await User.findOne({userId});
+            user.posts = user.posts.map(function (post) {
+              post.comments = post.comments.map(function (comment) {
+                if (post._id === postId && comment._id === commentId && !comment.likes.includes(decodedData.id)) {
+                  comment.likes.push(decodedData.id);
                 }
-            }
-            res.json({
-                resultCode: 0,
-                profile: user,
+                return comment;
+              })
+              return post;
             })
-            await user.save()
+            await user.save();
+            return res.status(200).json({
+              message: "Comment was liked successfully"
+            })
         } catch (e) {
-            res.json({
-                resultCode: 1,
-                error: {
-                    type: "likeComment-catch-error",
-                    body: e.message
-                }
-            })
+            return new HTTP_Error(res, "likecomment", "Server error. Please try to like comment later.").InternalServerError()
         }
     }
 
     async disLikePost(req, res) {
         try {
-            const {userId, postId} = req.body
-            const user = await Profile.findOne({userId})
-            for (let i = 0; i < user.posts.length; i++) {
-                if (user.posts[i]._id === postId) {
-                    user.posts[i].Likes = user.posts[i].Likes - 1
+            const {userId, postId} = req.body;
+            const {decodedData} = req;
+            const user = await User.findOne({userId});
+            user.posts = user.posts.map(function (post) {
+                if (post._id === postId) {
+                    post.likes = post.likes.filter(id => id !== decodedData.id);
                 }
-            }
-            res.json({
-                resultCode: 0,
-                profile: user,
+                return post;
             })
             await user.save()
-        } catch (e) {
-            res.json({
-                resultCode: 1,
-                error: {
-                    type: "disLikePost-catch-error",
-                    body: e.message
-                }
+            return res.status(200).json({
+                message: "Post was disliked successfully",
             })
+        } catch (e) {
+            return new HTTP_Error(res, "dislikepost", "Server error. Please try to dislike post later.").InternalServerError()
         }
     }
 
     async disLikeComment(req, res) {
         try {
-            const {commentId, userId} = req.body
-            const user = await Profile.findOne({userId})
-            for (let i = 0; i < user.posts.length; i++) {
-                for (let j = 0; j < user.posts[i].Comments.length; j++) {
-                    if (user.posts[i].Comments[j]._id === commentId) {
-                        user.posts[i].Comments[j].Likes = user.posts[i].Comments[j].Likes - 1
+            const {commentId, postId, userId} = req.body
+            const {decodedData} = req;
+            const user = await User.findOne({userId})
+            user.posts = user.posts.map(function (post) {
+                post.comments = post.comments.map(function (comment) {
+                    if (post._id === postId && comment._id === commentId) {
+                        comment.likes = comment.likes.filter(id => id !== decodedData.id);
                     }
-                }
-            }
-            res.json({
-                resultCode: 0,
-                profile: user,
-            })
+                    return comment;
+                })
+                return post;
+            })            
             await user.save()
-        } catch (e) {
-            res.json({
-                type: "disLikeComment-catch-error",
-                body: e.message
+            res.status(200).json({
+                message: "Comment was disliked successfully"
             })
+        } catch (e) {
+            return new HTTP_Error(res, "dislikecomment", "Server error. Please try to dislike comment later.").InternalServerError()
         }
     }
 }
