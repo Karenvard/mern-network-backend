@@ -1,4 +1,4 @@
-const User = require("../models/Profile");
+const User = require("../models/User");
 const Chat = require('../models/Chat');
 const {HTTP_Error} = require("./errorController");
 

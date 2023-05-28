@@ -1,28 +1,17 @@
 require("dotenv").config({path: "../../server/.env"})
-const jwt = require("jsonwebtoken")
+const jwt = require("jsonwebtoken");
+const {HTTP_Error} = require("../Controllers/errorController")
 
 module.exports = function (req, res, next) {
     try {
         if (!req.headers.authorization) {
-            return res.json({
-                resultCode: 1,
-                error: {
-                    type: "no-token-error",
-                    body: "Пользователь не авторизован"
-                }
-            })
+            return new HTTP_Error(res, "auth", "User is not authorized").BadRequest();         
         }
         const token = req.headers.authorization.split(' ')[1]
         const decodedData = jwt.verify(token, process.env.SECRET_KEY)
         req.decodedData = decodedData
         next()
     } catch (e) {
-        return res.json({
-            resultCode: 1,
-            error: {
-                type: "authMiddleware-catch-error",
-                body: e.message,
-            }
-        })
+        return new HTTP_Error(res, "auth", "Server error. Please try again later.").InternalServerError();
     }
 }

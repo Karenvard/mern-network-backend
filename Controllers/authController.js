@@ -1,6 +1,5 @@
 require("dotenv").config()
 const User = require("../models/User");
-const Profile = require("../models/Profile")
 const Role = require("../models/Role");
 const bcryptjs = require("bcryptjs");
 const jwt = require("jsonwebtoken")
@@ -28,18 +27,19 @@ class authController {
                 return new HTTP_Error(res, "signup", error.msg).BadRequest()
             }
             const {username, name, surname, password} = req.body;
-            const candidate = await User.findOne({login})
+            const candidate = await User.findOne({username})
             if (candidate) {
-                return new HTTP_Error(res, "signup", "User with username ${login} is already exists.").BadRequest()
+                return new HTTP_Error(res, "signup", `User with username ${login} is already exists.`).BadRequest()
             }
             const hashedPassword = bcryptjs.hashSync(password, 7)
-            const userRole = await Role.findOne({value: "USER"})
-            const user = new User({username, password: hashedPassword, roles: [userRole.value], name, surname})
+            const userRole = await Role.findOne({NAME: "USER"})
+            const user = new User({username, password: hashedPassword, roles: [userRole], name, surname})
             await user.save()
             return res.status(200).json({
                 message: `User ${username} was signed up successfully`
             })
         } catch (e) {
+            console.log(e);
             return new HTTP_Error(res, "signup", "Server error. Please try sign up later").InternalServerError()
         }
     }
@@ -63,7 +63,7 @@ class authController {
     async profile(req, res) {
         try {
             const {decodedData} = req
-            const authUserData = await User.findOne({userId: decodedData.id})
+            const authUserData = await User.findOne({_id: decodedData.id})
             if (!authUserData) return new HTTP_Error(res, "profile", `Server error. No user ${decodedData.username}`).BadRequest()
             return res.status(200).json({
                 profile: authUserData
@@ -107,7 +107,8 @@ class authController {
 
     async changeAboutMe(req, res) {
         try {
-            const {decodedData, aboutMe} = req;
+            const {decodedData} = req;
+            const {aboutMe} = req.body;
             const errors = validationResult(req);
             if (!errors.isEmpty()) {
               const error = errors.array()[0];
@@ -115,7 +116,7 @@ class authController {
             }
             await Profile.UpdateOne({userId: decodedData.id}, {
               $set: {
-                aboutMe: aboutMe
+                aboutMe
               }
             })
             res.status(200).json({
@@ -129,9 +130,13 @@ class authController {
     async changeStatus(req, res) {
         try {
             const errors = validationResult(req)
-            const {decodedData, status} = req
-            const authProfile = await Profile.findOne({userId: decodedData.id})
-            authProfile.status = body.value
+            const {decodedData} = req;
+            const {status} = req.body;
+            await Profile.UpdateOne({userId: decodedData.id}, {
+              $set: {
+                status
+              }
+            })
             if (!errors.isEmpty()) {
               const error = errors.array()[0];
               return new HTTP_Error(res, "status", error.msg).BadRequest()
@@ -169,14 +174,20 @@ class authController {
     async addComment(req, res) {
         try {
             const {decodedData} = req;
-            const {title, body, userId} = req.body;
+            const {title, body, userId, postId} = req.body;
             const user = await User.findOne({userId})
-            user.posts.comments.push({
-                owner: await User.findOne({_id: decodedData.id}),
-                title,
-                body,
-                likes: 0,
+            user.posts = user.posts.map(async function(post) {
+                if (post._id === postId) {
+                  post.comments.push({
+                    owner: await User.findOne({_id: decodedData.id}),
+                    title,
+                    body,
+                    likes: 0,
+                  })
+                }
+                return post;
             })
+            user.save();
             res.status(200).json({
                   message: "Comment was added successfully"
             })

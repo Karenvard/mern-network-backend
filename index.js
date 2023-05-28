@@ -7,8 +7,7 @@ const mongoose = require('mongoose')
 const WSServer = require("express-ws")(app);
 const aWSs = WSServer.getWss();
 const path = require('path')
-const ChalkStyles = require('./ChalkStyles')
-require("dotenv").config({path: path.resolve(__dirname, ".env")})
+require("dotenv").config()
 const fileUpload = require('express-fileupload')
 app.use(cors())
 app.use(express.json())
@@ -47,9 +46,9 @@ app.ws("/", (ws, req) => {
 const start = async () => {
     try {
         await mongoose.connect(process.env.MONGO_URI)
-        app.listen(PORT, () => {ChalkStyles.successfulMSG(`Server started on - ${process.env.SERVER_HOST}`);});
+        app.listen(PORT, () => console.log(`Server started on - ${process.env.SERVER_HOST}`));
     } catch (e) {
-        ChalkStyles.errorMSG(e);
+        console.log(e);
     }
 }
 

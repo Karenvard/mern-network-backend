@@ -1,6 +1,6 @@
 const path = require("path");
 
-export class HTTP_Error {
+class HTTP_Error {
 
     constructor (res, type, message) {
         if (type && message) {
@@ -35,4 +35,4 @@ export class HTTP_Error {
     }
 }
 
-export default HTTP_Error = new HTTP_Error();
+module.exports = {HTTP_Error};

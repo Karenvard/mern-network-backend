@@ -18,8 +18,8 @@ router.post("/signup", [
 
 router.post("/signin", [
     check('username', "Имя пользователя не может быть пустым").notEmpty(),
-    check('password', 'Пароль пользователя не может быть пустым').notEmpty(),
-], authController.singin)
+    check('password', 'Пароль пользователя не может быть пустым').notEmpty()
+], authController.signin)
 
 router.get("/profile", authMiddleware, authController.profile)
 
@@ -27,13 +27,13 @@ router.post("/photo", [
     authMiddleware,
     fileUpload({}),
     imageMiddleware,
-], authController.uploadAuthPhoto)
+], authController.uploadAvatar)
 
 router.post("/header", [
     authMiddleware,
     fileUpload({}),
     imageMiddleware,
-], authController.uploadHeaderPhoto)
+], authController.uploadHeader)
 
 router.post("/aboutMe", [
     authMiddleware,
