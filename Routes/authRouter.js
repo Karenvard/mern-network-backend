@@ -71,4 +71,8 @@ router.post("/disLikePost", authMiddleware, authController.disLikePost)
 
 router.post("/disLikeComment", authMiddleware, authController.disLikeComment)
 
+router.get("/clearAvatar", authMiddleware, authController.clearAvatar);
+
+router.get("/clearHeader", authMiddleware, authController.clearHeader);
+
 module.exports = router;

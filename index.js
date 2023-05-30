@@ -9,14 +9,12 @@ const aWSs = WSServer.getWss();
 const path = require('path')
 require("dotenv").config()
 const fileUpload = require('express-fileupload')
-app.use(cors())
+app.use(cors({}))
 app.use(express.json())
 app.use(API_URL, router)
 app.use(express.static(path.resolve(__dirname, 'static')))
 app.use(express.static(path.resolve(__dirname, '..')))
 app.use(fileUpload({}))
-
-const PORT = process.env.SERVER_PORT;
 
 const broadcastMessage = (msg) => {
     aWSs.clients.forEach(client => {
@@ -46,7 +44,7 @@ app.ws("/", (ws, req) => {
 const start = async () => {
     try {
         await mongoose.connect(process.env.MONGO_URI)
-        app.listen(PORT, () => console.log(`Server started on - ${process.env.SERVER_HOST}`));
+        app.listen(process.env.SERVER_PORT, () => console.log(`Server started on - ${process.env.SERVER_HOST}`));
     } catch (e) {
         console.log(e);
     }

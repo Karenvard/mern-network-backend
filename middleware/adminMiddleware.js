@@ -9,6 +9,6 @@ module.exports = async function (req, res, next) {
         }
         next()
     } catch (e) {
-        return new HTTP_Error(res, "admin", "Server error.")
+        return new HTTP_Error(res, "admin", "Server error.").InternalServerError();
     }
 }
