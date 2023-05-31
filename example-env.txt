@@ -1,0 +1,5 @@
+SERVER_PORT=0000
+SERVER_HOST=http://localhost:0000
+SECRET_KEY=secret key for jwt
+MONGO_URI=uri for db connection
+API_URL=some url
