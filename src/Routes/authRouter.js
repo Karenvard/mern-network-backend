@@ -37,7 +37,7 @@ router.post("/header", [
 
 router.post("/aboutMe", [
     authMiddleware,
-    check('aboutMe', "Описание профиля не может быть больше 50 символов").isLength({max: 50})
+    check('aboutMe', "Описание профиля не может быть больше 50 символов").isLength({max: 400})
 ], authController.changeAboutMe)
 
 router.post("/status", [
@@ -71,8 +71,8 @@ router.post("/disLikePost", authMiddleware, authController.disLikePost)
 
 router.post("/disLikeComment", authMiddleware, authController.disLikeComment)
 
-router.get("/clearAvatar", authMiddleware, authController.clearAvatar);
+router.delete("/clearAvatar", authMiddleware, authController.clearAvatar);
 
-router.get("/clearHeader", authMiddleware, authController.clearHeader);
+router.delete("/clearHeader", authMiddleware, authController.clearHeader);
 
 module.exports = router;

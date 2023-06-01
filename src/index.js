@@ -12,7 +12,7 @@ const fileUpload = require('express-fileupload')
 app.use(cors({}))
 app.use(express.json())
 app.use(API_URL, router)
-app.use(express.static(path.resolve(__dirname, 'static')))
+app.use(express.static(path.resolve(__dirname, "..", 'static')))
 app.use(express.static(path.resolve(__dirname, '..')))
 app.use(fileUpload({}))
 

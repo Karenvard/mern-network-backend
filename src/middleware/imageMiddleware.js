@@ -12,7 +12,7 @@ module.exports = function (req, res, next) {
             return new HTTP_Error(res, "image", "File is not equal to image format.").BadRequest();
         }
         const fileName = uuid.v4() + format
-        photo.mv(path.resolve(__dirname, '..', 'static', fileName))
+        photo.mv(path.resolve(__dirname, '..', "..", 'static', fileName))
         req.fileName = fileName
         next()
     } catch (e) {

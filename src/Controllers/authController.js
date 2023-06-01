@@ -1,4 +1,5 @@
-require("dotenv").config()
+require("dotenv").config();
+const path = require("path");
 const User = require("../models/User");
 const Role = require("../models/Role");
 const bcryptjs = require("bcryptjs");
@@ -89,11 +90,11 @@ class authController {
   async uploadAvatar(req, res) {
     try {
       const { decodedData, fileName } = req;
-      const user = User.findOne({ _id: decodedData.id });
+      const user = await User.findOne({ _id: decodedData.id });
       if (user.avatar) {
         const splittedLink = user.avatar.split("/");
         const PhotoName = splittedLink[splittedLink.length - 1];
-        fs.unlink(`${process.env.SERVER_HOST}/${PhotoName}`, function(err) {
+        fs.unlink(path.resolve(__dirname, "..", "..", "static", PhotoName), function(err) {
           if (err) throw new Error();
         });
       }
@@ -101,7 +102,7 @@ class authController {
         $set: {
           avatar: `${process.env.SERVER_HOST}/${fileName}`,
         }
-      })
+      });
       res.status(200).json({
         message: "Photo uploaded successfully"
       })
@@ -113,12 +114,12 @@ class authController {
   async uploadHeader(req, res) {
     try {
       const { decodedData, fileName } = req;
-      const user = User.findOne({ _id: decodedData.id });
+      const user = await User.findOne({ _id: decodedData.id });
       if (user.header) {
         const splittedLink = user.header.split("/");
         const PhotoName = splittedLink[splittedLink.length - 1];
-        fs.unlink(`${process.env.SERVER_HOST}/${PhotoName}`, function(err) {
-          if (err) throw new Error();
+        fs.unlink(path.resolve(__dirname, "..", "..", "static", PhotoName), function(err) {
+          if (err) throw new Error("");
         });
       }
       await User.updateOne({ _id: decodedData.id }, {
@@ -130,6 +131,7 @@ class authController {
         message: "Photo uploaded successfully"
       })
     } catch (e) {
+      console.log(e);
       return new HTTP_Error(res, "header", "Server error. Please try upload photo later.").InternalServerError()
     }
   }
@@ -140,11 +142,10 @@ class authController {
       const user = await User.findOne({_id: decodedData.id});
       const splittedOldPhotoUrl = user.avatar.split("/");
       const oldPhotoName = splittedOldPhotoUrl[splittedOldPhotoUrl.length - 1];
-      fs.unlink(`${process.env.SERVER_HOST}/${oldPhotoName}`, function (err) {
-        if (err) throw new Error();
+      fs.unlink(path.resolve(__dirname, "..", "..", "static", oldPhotoName), function (err) {
+        if (err) throw new Error("");
       });
-      user.avatar = "";
-      await user.save();
+      await User.updateOne({_id: decodedData.id}, {$set: {avatar: ""}})
       return res.status(200).json({});
     } catch(_) {
       return new HTTP_Error(res, "clearavatar", "Server error. Please try delete profile photo later.").InternalServerError();
@@ -157,11 +158,10 @@ class authController {
       const user = await User.findOne({_id: decodedData.id});
       const splittedOldPhotoUrl = user.header.split("/");
       const oldPhotoName = splittedOldPhotoUrl[splittedOldPhotoUrl.length - 1];
-      fs.unlink(`${process.env.SERVER_HOST}/${oldPhotoName}`, function (err) {
-        if (err) throw new Error();
+      fs.unlink(path.resolve(__dirname, "..", "..", "static", oldPhotoName), function (err) {
+        if (err) throw new Error("");
       });
-      user.header = "";
-      await user.save();
+      await User.updateOne({_id: decodedData.id}, {$set: {header: ""}});
       return res.status(200).json({});
     } catch(_) {
       return new HTTP_Error(res, "clearheader", "Server error. Please try delete profile header photo later.").InternalServerError();
