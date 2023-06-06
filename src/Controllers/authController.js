@@ -86,6 +86,17 @@ class authController {
       return new HTTP_Error(res, "Server error. Please try again later.").InternalServerError()
     }
   }
+  
+  async posts(req, res) {
+    try {
+      const { page, pagiSize} = req.query;
+      const { decodedData } = req;
+      const { posts } = await Profile.findOne({_id: decodedData});
+      
+    } catch(e) {
+      return new HTTP_Error(res, "posts", "Server error. Please try to get posts later.").InternalServerError()
+    }
+  }
 
   async uploadAvatar(req, res) {
     try {
